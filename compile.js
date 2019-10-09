@@ -49,13 +49,13 @@ class Compile {
     // 获取表达式
     // {{a+b()}}
     const exp = RegExp.$1;
-    this.update(node, exp, "text");
+    this.update(node, exp, 'text');
   }
 
   // 通用方法 update(node, 'xxx', 'text')
   update(node, exp, dir) {
     // 构造更新函数并执行：相当于首次赋值
-    let updaterFn = this[dir + "Updater"];
+    let updaterFn = this[dir + 'Updater'];
     updaterFn && updaterFn(node, this.$vm[exp]);
 
     // 创建watcher，执行后续更新操作
@@ -68,7 +68,6 @@ class Compile {
   textUpdater(node, value) {
     node.textContent = value;
   }
-
   compileElement(node) {
     // 获取属性
     const nodeAttrs = node.attributes;
@@ -77,15 +76,43 @@ class Compile {
       const attrName = attr.name; // k-text
       const exp = attr.value; // test
 
-      if (attrName.indexOf("k-") === 0) {
+      if (attrName.indexOf('k-') === 0) {
         // 指令 k-text k-model
         const dir = attrName.substring(2); // text
         this[dir] && this[dir](node, exp);
       }
+      if (attrName.indexOf('@') === 0) {
+        // 指令 @
+        const dir = attrName.substring(1); //事件名称
+        this.eventHandler(node, exp, dir);
+      }
     });
   }
-
   text(node, exp) {
-    this.update(node, exp, "text");
+    this.update(node, exp, 'text');
+  }
+  model(node, exp) {
+    // 1.执行更新。
+    this.update(node, exp, 'model');
+    // 2.事件监听
+    node.addEventListener('input', e => {
+      this.$vm[exp] = e.target.value;
+    });
+  }
+  modelUpdater(node, value) {
+    node.value = value;
+  }
+  html(node, exp) {
+    this.update(node, exp, 'html');
+  }
+  htmlUpdater(node, value) {
+    node.innerHTML = value;
+  }
+  eventHandler(node, exp, dir) {
+    // 获取回调函数
+    const fn = this.$vm.$options.methods && this.$vm.$options.methods[exp];
+    if (dir && fn) { //如果用户有监听事件并且fn也存在
+      node.addEventListener(dir,fn.bind(this.$vm));
+    }
   }
 }
